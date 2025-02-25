@@ -1,6 +1,6 @@
 from flask import jsonify
 from app import app, db
-from app.models import Asset
+from models import Asset
 from flask_jwt_extended import jwt_required
 
 @app.route('/assets/<int:id>', methods=['DELETE'])

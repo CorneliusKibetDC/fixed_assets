@@ -29,3 +29,43 @@ class Asset(db.Model):
             'depreciation_end_date': self.depreciation_end_date,
             'purchase_date': self.purchase_date,
         }
+class Location(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.String(500))
+
+    assets = db.relationship('Asset', backref='location', lazy=True)
+
+    def __repr__(self):
+        return f'<Location {self.name}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+        }
+
+class Assignment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    asset_id = db.Column(db.Integer, db.ForeignKey('asset.id'), nullable=False)
+    location_id = db.Column(db.Integer, db.ForeignKey('location.id'), nullable=False)
+    assigned_to = db.Column(db.String(255), nullable=False)
+    assigned_date = db.Column(db.Date)
+    return_date = db.Column(db.Date)
+
+    asset = db.relationship('Asset', backref='assignments', lazy=True)
+    location = db.relationship('Location', backref='assignments', lazy=True)
+
+    def __repr__(self):
+        return f'<Assignment {self.assigned_to} - {self.asset_id}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'asset_id': self.asset_id,
+            'location_id': self.location_id,
+            'assigned_to': self.assigned_to,
+            'assigned_date': self.assigned_date,
+            'return_date': self.return_date,
+        }
