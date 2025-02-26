@@ -77,9 +77,10 @@
 
 
 
-from app import db
+from exts import db
 
 class Asset(db.Model):
+    __tablename__ = "asset"
     id = db.Column(db.Integer, primary_key=True)
     item = db.Column(db.String(255), nullable=False)
     specifications = db.Column(db.String(500))  # Added this field
