@@ -36,7 +36,6 @@ class AssetList(Resource):
         """
         assets = Asset.query.all()
         return assets, 200
-
     @asset_ns.expect(Asset_model)
     @asset_ns.marshal_with(Asset_model, code=201)
     def post(self):
@@ -56,7 +55,6 @@ class AssetList(Resource):
             purchase_date = datetime.strptime(data['purchase_date'], '%Y-%m-%d').date()
         except ValueError:
             return {'message': 'Invalid date format for purchase_date'}, 400
-
         # Create new Asset
         new_asset = Asset(
             item=data['item'],
@@ -88,7 +86,6 @@ class AssetDetail(Resource):
     @asset_ns.marshal_with(Asset_model, code=200)
     def put(self, id):
         print(f"PUT request received for asset ID: {id}")
-
         # Fetch the asset by ID
         asset = Asset.query.get(id)
         if not asset:
@@ -161,7 +158,6 @@ class AssetFilter(Resource):
                 query = query.filter(Asset.depreciation_start_date >= depreciation_start_date)
             except ValueError:
                 return {'message': 'Invalid date format for depreciation_start_date'}, 400
-
         if 'depreciation_end_date' in filters:
             try:
                 depreciation_end_date = datetime.strptime(filters['depreciation_end_date'], '%Y-%m-%d').date()

@@ -171,9 +171,9 @@ from exts import db
 
 class Asset(db.Model):
     __tablename__ = "asset"
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     item = db.Column(db.String(255), nullable=False)
-    specifications = db.Column(db.String(500))  # Added this field
+    specifications = db.Column(db.String(500))  
     class_code = db.Column(db.String(50))
     serial_no = db.Column(db.String(50), unique=True)
     depreciation_rate = db.Column(db.Float)
