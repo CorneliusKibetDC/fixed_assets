@@ -9,6 +9,7 @@ import os
 from exts import db
 from models import Asset
 from config import ProdConfig
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -34,15 +35,15 @@ def create_app():
     # Register routes
     from manage_fixed_asset_assignment import register_routes as register_assignment_routes
     from manage_fixed_asset_locations import register_routes as register_location_routes
-    from filter_assets import register_routes as register_filter_routes
-    from delete_fixed_asset import register_routes as register_delete_routes
-    from add_fixed_asset import register_routes as register_add_asset_routes
+    from fixed_asset import register_routes as register_filter_routes
+    from fixed_asset import register_routes as register_asset_routes
+   
 
     register_assignment_routes(api)
     register_location_routes(api)
     register_filter_routes(api)
-    register_delete_routes(api)
-    register_add_asset_routes(api)
+    register_asset_routes(api)
+   
 
     # Test Route
     @app.route('/ping', methods=['GET'])

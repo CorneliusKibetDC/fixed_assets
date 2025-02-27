@@ -1,0 +1,38 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+alembic = "*"
+blinker = "*"
+click = "*"
+flask = "*"
+greenlet = "*"
+importlib-metadata = "*"
+importlib-resources = "*"
+itsdangerous ="*"
+jinja2 ="*"
+mako ="*"
+markupsafe ="*"
+psycopg2 ="*"
+sqlalchemy ="*"
+typing-extensions ="*"
+werkzeug ="*"
+zipp ="*"
+psycopg2-binary = "*"
+flask-sqlalchemy = "*"
+flask-migrate = "*"
+marshmallow = "*"
+marshmallow-sqlalchemy = "*"
+flask-marshmallow = "*"
+flask-jwt-extended = "*"
+flask-bcrypt = "*"
+python-dotenv = "*"
+flask-cors = "*"
+flask-restx = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.8"

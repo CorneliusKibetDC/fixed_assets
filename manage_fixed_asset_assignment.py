@@ -1,174 +1,3 @@
-# from flask import Blueprint, request, jsonify
-# from app import db
-# from models import Asset, Location, Assignment
-
-# # Create a Blueprint for the asset assignment management
-# assignment_bp = Blueprint('assignment', __name__)
-
-# @assignment_bp.route('/assignments', methods=['POST'])
-# def create_assignment():
-#     data = request.get_json()
-    
-#     # Validate input
-#     asset_id = data.get('asset_id')
-#     location_id = data.get('location_id')
-#     assigned_to = data.get('assigned_to')
-#     assigned_date = data.get('assigned_date')
-#     return_date = data.get('return_date')
-
-#     if not all([asset_id, location_id, assigned_to]):
-#         return jsonify({'error': 'Missing required fields'}), 400
-
-#     # Create a new assignment
-#     new_assignment = Assignment(
-#         asset_id=asset_id,
-#         location_id=location_id,
-#         assigned_to=assigned_to,
-#         assigned_date=assigned_date,
-#         return_date=return_date
-#     )
-
-#     db.session.add(new_assignment)
-#     db.session.commit()
-
-#     return jsonify(new_assignment.to_dict()), 201
-
-# @assignment_bp.route('/assignments/<int:assignment_id>', methods=['GET'])
-# def get_assignment(assignment_id):
-#     assignment = Assignment.query.get_or_404(assignment_id)
-#     return jsonify(assignment.to_dict())
-
-# @assignment_bp.route('/assignments/<int:assignment_id>', methods=['PUT'])
-# def update_assignment(assignment_id):
-#     assignment = Assignment.query.get_or_404(assignment_id)
-#     data = request.get_json()
-
-#     # Update fields from the request
-#     if 'asset_id' in data:
-#         assignment.asset_id = data['asset_id']
-#     if 'location_id' in data:
-#         assignment.location_id = data['location_id']
-#     if 'assigned_to' in data:
-#         assignment.assigned_to = data['assigned_to']
-#     if 'assigned_date' in data:
-#         assignment.assigned_date = data['assigned_date']
-#     if 'return_date' in data:
-#         assignment.return_date = data['return_date']
-
-#     db.session.commit()
-#     return jsonify(assignment.to_dict())
-
-# @assignment_bp.route('/assignments/<int:assignment_id>', methods=['DELETE'])
-# def delete_assignment(assignment_id):
-#     assignment = Assignment.query.get_or_404(assignment_id)
-#     db.session.delete(assignment)
-#     db.session.commit()
-#     return jsonify({'message': 'Assignment deleted successfully'}), 204
-
-# @assignment_bp.route('/assignments', methods=['GET'])
-# def get_assignments():
-#     assignments = Assignment.query.all()
-#     return jsonify([assignment.to_dict() for assignment in assignments])
-
-# # Register the blueprint in your app
-# def register_routes(app):
-#     app.register_blueprint(assignment_bp)
-
-
-
-
-
-
-
-
-
-
-### manage_fixed_asset_assignment.py
-
-# from flask import request, jsonify
-# from flask_restx import Namespace, Resource
-# from app import db
-# from models import Asset, Location, Assignment
-# from flask_jwt_extended import jwt_required
-
-# # Create a namespace for assignments
-# assignment_ns = Namespace('assignments', description='Asset assignment operations')
-
-# @assignment_ns.route('/')
-# class AssignmentList(Resource):
-#     #@jwt_required()
-#     def post(self):
-#         data = request.get_json()
-        
-#         # Validate input
-#         asset_id = data.get('asset_id')
-#         location_id = data.get('location_id')
-#         assigned_to = data.get('assigned_to')
-#         assigned_date = data.get('assigned_date')
-#         return_date = data.get('return_date')
-
-#         if not all([asset_id, location_id, assigned_to]):
-#             return jsonify({'error': 'Missing required fields'}), 400
-
-#         # Create a new assignment
-#         new_assignment = Assignment(
-#             asset_id=asset_id,
-#             location_id=location_id,
-#             assigned_to=assigned_to,
-#             assigned_date=assigned_date,
-#             return_date=return_date
-#         )
-
-#         db.session.add(new_assignment)
-#         db.session.commit()
-
-#         return jsonify(new_assignment.to_dict()), 201
-
-#     #@jwt_required()
-#     def get(self):
-#         assignments = Assignment.query.all()
-#         return jsonify([assignment.to_dict() for assignment in assignments]), 200
-
-# @assignment_ns.route('/<int:assignment_id>')
-# class AssignmentResource(Resource):
-#     #@jwt_required()
-#     def get(self, assignment_id):
-#         assignment = Assignment.query.get_or_404(assignment_id)
-#         return jsonify(assignment.to_dict()), 200
-
-#     #@jwt_required()
-#     def put(self, assignment_id):
-#         assignment = Assignment.query.get_or_404(assignment_id)
-#         data = request.get_json()
-
-#         # Update fields from the request
-#         if 'asset_id' in data:
-#             assignment.asset_id = data['asset_id']
-#         if 'location_id' in data:
-#             assignment.location_id = data['location_id']
-#         if 'assigned_to' in data:
-#             assignment.assigned_to = data['assigned_to']
-#         if 'assigned_date' in data:
-#             assignment.assigned_date = data['assigned_date']
-#         if 'return_date' in data:
-#             assignment.return_date = data['return_date']
-
-#         db.session.commit()
-#         return jsonify(assignment.to_dict()), 200
-
-#     #@jwt_required()
-#     def delete(self, assignment_id):
-#         assignment = Assignment.query.get_or_404(assignment_id)
-#         db.session.delete(assignment)
-#         db.session.commit()
-#         return jsonify({'message': 'Assignment deleted successfully'}), 204
-
-# # Register the namespace in your app
-# def register_routes(api):
-#     api.add_namespace(assignment_ns)
-
-
-
 
 
 
@@ -179,79 +8,152 @@
 
 
 from flask import request, jsonify
-from flask_restx import Namespace, Resource
+from flask_restx import Namespace, Resource, fields
 from app import db
 from models import Asset, Location, Assignment
 from flask_jwt_extended import jwt_required
+from sqlalchemy.orm import joinedload
+from datetime import datetime
 
 # Create a namespace for assignments
 assignment_ns = Namespace('assignments', description='Asset assignment operations')
 
+# Define API Model for input validation and documentation
+Assignment_model = assignment_ns.model(
+    'Assignment',
+    {
+        'asset_id': fields.Integer(required=True, description='ID of the assigned asset'),
+        'location_id': fields.Integer(required=True, description='ID of the location where asset is assigned'),
+        'assigned_to': fields.String(required=True, description='Person or department assigned to the asset'),
+        'assigned_date': fields.String(required=False, description='Date of assignment (YYYY-MM-DD)'),
+        'return_date': fields.String(required=False, description='Expected return date of the asset (YYYY-MM-DD)')
+    }
+)
+
+def serialize_date(date_obj):
+    """Helper function to convert a date object to a string."""
+    return date_obj.strftime('%Y-%m-%d') if date_obj else None
+
 @assignment_ns.route('/')
-class AssignmentList(Resource):
+class AssignmentListResource(Resource):
+    
     #@jwt_required()
+    @assignment_ns.expect(Assignment_model)
     def post(self):
         data = request.get_json()
-        
-        # Validate input
-        asset_id = data.get('asset_id')
-        location_id = data.get('location_id')
-        assigned_to = data.get('assigned_to')
-        assigned_date = data.get('assigned_date')
-        return_date = data.get('return_date')
 
-        if not all([asset_id, location_id, assigned_to]):
+        # Convert date strings to date objects
+        if 'assigned_date' in data and data['assigned_date']:
+            try:
+                data['assigned_date'] = datetime.strptime(data['assigned_date'], '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'error': 'Invalid assigned_date format. Use YYYY-MM-DD'}), 400
+        
+        if 'return_date' in data and data['return_date']:
+            try:
+                data['return_date'] = datetime.strptime(data['return_date'], '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'error': 'Invalid return_date format. Use YYYY-MM-DD'}), 400
+
+        required_fields = ['asset_id', 'location_id', 'assigned_to']
+        if not all(field in data for field in required_fields):
             return jsonify({'error': 'Missing required fields'}), 400
 
-        # Create a new assignment
-        new_assignment = Assignment(
-            asset_id=asset_id,
-            location_id=location_id,
-            assigned_to=assigned_to,
-            assigned_date=assigned_date,
-            return_date=return_date
-        )
+        new_assignment = Assignment(**data)
 
         try:
             db.session.add(new_assignment)
             db.session.commit()
-            return jsonify(new_assignment.to_dict()), 201
+
+            # Ensure new_assignment.to_dict() exists in the model
+            return jsonify({
+                'id': new_assignment.id,
+                'asset_id': new_assignment.asset_id,
+                'location_id': new_assignment.location_id,
+                'assigned_to': new_assignment.assigned_to,
+                'assigned_date': serialize_date(new_assignment.assigned_date),
+                'return_date': serialize_date(new_assignment.return_date)
+            })
         except Exception as e:
             db.session.rollback()
             return jsonify({'error': str(e)}), 500
 
     #@jwt_required()
     def get(self):
-        assignments = Assignment.query.all()
-        return jsonify([assignment.to_dict() for assignment in assignments]), 200
+        assignments = Assignment.query.options(
+            joinedload(Assignment.asset), 
+            joinedload(Assignment.location)
+        ).all()
+
+        data = []
+        for assignment in assignments:
+            assignment_data = {
+                'id': assignment.id,
+                'asset_id': assignment.asset_id,
+                'location_id': assignment.location_id,
+                'assigned_to': assignment.assigned_to,
+                'assigned_date': serialize_date(assignment.assigned_date),
+                'return_date': serialize_date(assignment.return_date),
+                'asset': assignment.asset.to_dict() if hasattr(assignment.asset, 'to_dict') else None,
+                'location': assignment.location.to_dict() if hasattr(assignment.location, 'to_dict') else None
+            }
+            data.append(assignment_data)
+
+        return jsonify(data)
 
 @assignment_ns.route('/<int:assignment_id>')
 class AssignmentResource(Resource):
+    
     #@jwt_required()
     def get(self, assignment_id):
-        assignment = Assignment.query.get_or_404(assignment_id)
-        return jsonify(assignment.to_dict()), 200
+        assignment = Assignment.query.options(
+            joinedload(Assignment.asset),
+            joinedload(Assignment.location)
+        ).get_or_404(assignment_id)
 
+        return jsonify({
+            'id': assignment.id,
+            'asset_id': assignment.asset_id,
+            'location_id': assignment.location_id,
+            'assigned_to': assignment.assigned_to,
+            'assigned_date': serialize_date(assignment.assigned_date),
+            'return_date': serialize_date(assignment.return_date),
+            'asset': assignment.asset.to_dict() if hasattr(assignment.asset, 'to_dict') else None,
+            'location': assignment.location.to_dict() if hasattr(assignment.location, 'to_dict') else None
+        })
+    
     #@jwt_required()
+    @assignment_ns.expect(Assignment_model)
     def put(self, assignment_id):
         assignment = Assignment.query.get_or_404(assignment_id)
         data = request.get_json()
 
-        # Update fields from the request
-        if 'asset_id' in data:
-            assignment.asset_id = data['asset_id']
-        if 'location_id' in data:
-            assignment.location_id = data['location_id']
-        if 'assigned_to' in data:
-            assignment.assigned_to = data['assigned_to']
-        if 'assigned_date' in data:
-            assignment.assigned_date = data['assigned_date']
-        if 'return_date' in data:
-            assignment.return_date = data['return_date']
+        # Convert date strings to date objects
+        if 'assigned_date' in data and data['assigned_date']:
+            try:
+                data['assigned_date'] = datetime.strptime(data['assigned_date'], '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'error': 'Invalid assigned_date format. Use YYYY-MM-DD'}), 400
+        
+        if 'return_date' in data and data['return_date']:
+            try:
+                data['return_date'] = datetime.strptime(data['return_date'], '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'error': 'Invalid return_date format. Use YYYY-MM-DD'}), 400
+
+        for key, value in data.items():
+            setattr(assignment, key, value)
 
         try:
             db.session.commit()
-            return jsonify(assignment.to_dict()), 200
+            return jsonify({
+                'id': assignment.id,
+                'asset_id': assignment.asset_id,
+                'location_id': assignment.location_id,
+                'assigned_to': assignment.assigned_to,
+                'assigned_date': serialize_date(assignment.assigned_date),
+                'return_date': serialize_date(assignment.return_date)
+            })
         except Exception as e:
             db.session.rollback()
             return jsonify({'error': str(e)}), 500
@@ -259,10 +161,11 @@ class AssignmentResource(Resource):
     #@jwt_required()
     def delete(self, assignment_id):
         assignment = Assignment.query.get_or_404(assignment_id)
+
         try:
             db.session.delete(assignment)
             db.session.commit()
-            return jsonify({'message': 'Assignment deleted successfully'}), 204
+            return jsonify({'message': 'Assignment deleted successfully'})
         except Exception as e:
             db.session.rollback()
             return jsonify({'error': str(e)}), 500
