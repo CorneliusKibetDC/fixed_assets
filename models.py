@@ -1,74 +1,127 @@
-# from app import db
+# from exts import db
+# from sqlalchemy.sql import text
+# from datetime import date, timedelta
 
-# class Asset(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     item = db.Column(db.String(255), nullable=False)
-#     class_code = db.Column(db.String(50))
-#     serial_no = db.Column(db.String(50), unique=True)
-#     depreciation_rate = db.Column(db.Float)
-#     purchase_price = db.Column(db.Float)
-#     status = db.Column(db.String(20))  
-#     depreciation_start_date = db.Column(db.Date)
-#     depreciation_end_date = db.Column(db.Date)
-#     purchase_date = db.Column(db.Date)
+# def calculate_depreciation_end_date(purchase_price, depreciation_rate, purchase_date):
+#     """
+#     Calculate the date when an asset will be fully depreciated.
+#     """
+#     if not purchase_price or not depreciation_rate or depreciation_rate <= 0:
+#         return None
 
-#     def __repr__(self):
-#         return f'<Asset {self.item}>'
+#     years_to_depreciate = 1 / (depreciation_rate / 100)
+#     depreciation_end = purchase_date + timedelta(days=int(years_to_depreciate * 365))
+    
+#     return depreciation_end
 
-#     def to_dict(self):
-#         return {
-#             'id': self.id,
-#             'item': self.item,
-#             'category': self.category,
-#             'class_code': self.class_code,
-#             'serial_no': self.serial_no,
-#             'depreciation_rate': self.depreciation_rate,
-#             'purchase_price': self.purchase_price,
-#             'status': self.status,
-#             'depreciation_start_date': self.depreciation_start_date,
-#             'depreciation_end_date': self.depreciation_end_date,
-#             'purchase_date': self.purchase_date,
-#         }
-# class Location(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(255), nullable=False)
-#     description = db.Column(db.String(500))
+# def create_tables():
+#     """Ensures tables exist without dropping them."""
+#     with db.engine.begin() as connection:
+#         print("🚀 Ensuring tables exist...")
 
-#     assets = db.relationship('Asset', backref='location', lazy=True)
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS location (
+#             id SERIAL PRIMARY KEY,
+#             name VARCHAR(255) NOT NULL,
+#             description VARCHAR(500)
+#         );
+#         """))
 
-#     def __repr__(self):
-#         return f'<Location {self.name}>'
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS assignment (
+#             id SERIAL PRIMARY KEY,
+#             asset_id INTEGER,
+#             location_id INTEGER REFERENCES location(id) ON DELETE CASCADE,
+#             assigned_to VARCHAR(255) NOT NULL,
+#             assigned_date DATE DEFAULT CURRENT_DATE,
+#             return_date DATE
+#         );
+#         """))
 
-#     def to_dict(self):
-#         return {
-#             'id': self.id,
-#             'name': self.name,
-#             'description': self.description,
-#         }
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS asset (
+#             id SERIAL PRIMARY KEY,  -- ✅ Auto-incremented ID
+#             item VARCHAR(255) NOT NULL,
+#             specifications VARCHAR(500),
+#             class_code VARCHAR(50),
+#             serial_no VARCHAR(50) UNIQUE,
+#             assignment_id INTEGER REFERENCES assignment(id) ON DELETE CASCADE,
+#             depreciation_rate FLOAT NOT NULL,
+#             purchase_price FLOAT NOT NULL,
+#             depreciation_end_date DATE,
+#             purchase_date DATE DEFAULT CURRENT_DATE,
+#             location_id INTEGER REFERENCES location(id) ON DELETE CASCADE,
+#             vendor VARCHAR(255),
+#             condition VARCHAR(50)
+#         );
+#         """))
 
-# class Assignment(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     asset_id = db.Column(db.Integer, db.ForeignKey('asset.id'), nullable=False)
-#     location_id = db.Column(db.Integer, db.ForeignKey('location.id'), nullable=False)
-#     assigned_to = db.Column(db.String(255), nullable=False)
-#     assigned_date = db.Column(db.Date)
-#     return_date = db.Column(db.Date)
+#         print("✅ Tables checked/created successfully.")
 
-#     asset = db.relationship('Asset', backref='assignments', lazy=True)
-#     location = db.relationship('Location', backref='assignments', lazy=True)
 
-#     def __repr__(self):
-#         return f'<Assignment {self.assigned_to} - {self.asset_id}>'
 
-#     def to_dict(self):
-#         return {
-#             'id': self.id,
-#             'asset_id': self.asset_id,
-#             'location_id': self.location_id,
-#             'assigned_to': self.assigned_to,
-#             'assigned_date': self.assigned_date,
-#             'return_date': self.return_date,
-#         }
+
+# from exts import db
+# from sqlalchemy.sql import text
+# from datetime import date, timedelta
+
+# def calculate_depreciation_end_date(purchase_price, depreciation_rate, purchase_date):
+#     """
+#     Calculate the date when an asset will be fully depreciated.
+#     Formula: Depreciation Duration (Years) = Purchase Price / (Depreciation Rate * Purchase Price)
+#     """
+#     if not purchase_price or not depreciation_rate or depreciation_rate <= 0:
+#         return None
+
+#     years_to_depreciate = 1 / (depreciation_rate / 100)  # Convert rate to fraction
+#     depreciation_end = purchase_date + timedelta(days=int(years_to_depreciate * 365))
+
+#     return depreciation_end
+
+# def create_tables():
+#     """Ensures tables exist without dropping them."""
+#     with db.engine.begin() as connection:
+#         print("🚀 Ensuring tables exist...")
+
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS location (
+#             id SERIAL PRIMARY KEY,
+#             name VARCHAR(255) NOT NULL,
+#             description VARCHAR(500)
+#         );
+#         """))
+
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS assignment (
+#             id SERIAL PRIMARY KEY,
+#             asset_id INTEGER,
+#             location_id INTEGER REFERENCES location(id) ON DELETE CASCADE,
+#             assigned_to VARCHAR(255) NOT NULL,
+#             assigned_date DATE DEFAULT CURRENT_DATE,
+#             return_date DATE
+#         );
+#         """))
+
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS asset (
+#             id SERIAL PRIMARY KEY,
+#             item VARCHAR(255) NOT NULL,
+#             specifications VARCHAR(500),
+#             class_code VARCHAR(50),
+#             serial_no VARCHAR(50) UNIQUE,
+#             assignment_id INTEGER REFERENCES assignment(id) ON DELETE CASCADE,
+#             depreciation_rate FLOAT NOT NULL,
+#             purchase_price FLOAT NOT NULL,
+#             depreciation_start_date DATE DEFAULT CURRENT_DATE,
+#             depreciation_end_date DATE,
+#             purchase_date DATE DEFAULT CURRENT_DATE,
+#             location_id INTEGER REFERENCES location(id) ON DELETE CASCADE,
+#             vendor VARCHAR(255),
+#             condition VARCHAR(50)
+#         );
+#         """))
+
+#         print("✅ Tables checked/created successfully.")
 
 
 
@@ -78,88 +131,239 @@
 
 
 # from exts import db
+# from sqlalchemy.sql import text
+# from datetime import date, timedelta
 
-# class Asset(db.Model):
-#     __tablename__ = "asset"
-#     id = db.Column(db.Integer, primary_key=True)
-#     item = db.Column(db.String(255), nullable=False)
-#     specifications = db.Column(db.String(500))  # Added this field
-#     class_code = db.Column(db.String(50))
-#     serial_no = db.Column(db.String(50), unique=True)
-#     depreciation_rate = db.Column(db.Float)
-#     purchase_price = db.Column(db.Float)
-#     status = db.Column(db.String(20))
-#     depreciation_start_date = db.Column(db.Date)
-#     depreciation_end_date = db.Column(db.Date)
-#     purchase_date = db.Column(db.Date)
-#     location_id = db.Column(db.Integer, db.ForeignKey('location.id'))  # Added FK to Location
-#     vendor = db.Column(db.String(255))  # Added vendor field
-#     condition = db.Column(db.String(50))  # Added condition field
+# def calculate_depreciation_end_date(purchase_price, depreciation_rate, purchase_date):
+#     """
+#     Calculate the date when an asset will be fully depreciated.
+#     Formula: Depreciation Duration (Years) = 1 / (Depreciation Rate / 100)
+#     """
+#     if not purchase_price or not depreciation_rate or depreciation_rate <= 0:
+#         return None
 
-#     location = db.relationship('Location', backref='assets')  # Fixed relationship
+#     years_to_depreciate = 1 / (depreciation_rate / 100)  # Convert rate to fraction
+#     depreciation_end = purchase_date + timedelta(days=int(years_to_depreciate * 365))
 
-#     def __repr__(self):
-#         return f'<Asset {self.item}>'
+#     return depreciation_end
 
-#     def to_dict(self):
-#         return {
-#             'id': self.id,
-#             'item': self.item,
-#             'specifications': self.specifications,
-#             'class_code': self.class_code,
-#             'serial_no': self.serial_no,
-#             'depreciation_rate': self.depreciation_rate,
-#             'purchase_price': self.purchase_price,
-#             'status': self.status,
-#             'depreciation_start_date': self.depreciation_start_date,
-#             'depreciation_end_date': self.depreciation_end_date,
-#             'purchase_date': self.purchase_date,
-#             'vendor': self.vendor,
-#             'condition': self.condition,
-#             'location': self.location.name if self.location else None
-#         }
+# def create_tables():
+#     """Ensures tables exist without dropping them."""
+#     with db.engine.begin() as connection:
+#         print("🚀 Ensuring tables exist...")
 
-# class Location(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(255), nullable=False)
-#     description = db.Column(db.String(500))
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS location (
+#             id SERIAL PRIMARY KEY,
+#             name VARCHAR(255) NOT NULL,
+#             description VARCHAR(500)
+#         );
+#         """))
 
-#     def __repr__(self):
-#         return f'<Location {self.name}>'
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS assignment (
+#             id SERIAL PRIMARY KEY,
+#             asset_id INTEGER REFERENCES asset(id) ON DELETE CASCADE,
+#             location_id INTEGER REFERENCES location(id) ON DELETE CASCADE,
+#             assigned_to VARCHAR(255) NOT NULL,
+#             assigned_date DATE DEFAULT CURRENT_DATE,
+#             return_date DATE
+#         );
+#         """))
 
-#     def to_dict(self):
-#         return {
-#             'id': self.id,
-#             'name': self.name,
-#             'description': self.description,
-#         }
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS asset (
+#             id SERIAL PRIMARY KEY,
+#             item VARCHAR(255) NOT NULL,
+#             specifications VARCHAR(500),
+#             class_code VARCHAR(50),
+#             serial_no VARCHAR(50) UNIQUE,
+#             assignment_id INTEGER REFERENCES assignment(id) ON DELETE CASCADE,
+#             depreciation_rate FLOAT NOT NULL,
+#             purchase_price FLOAT NOT NULL,
+#             depreciation_end_date DATE,
+#             purchase_date DATE DEFAULT CURRENT_DATE,
+#             vendor VARCHAR(255),
+#             condition VARCHAR(50)
+#         );
+#         """))
 
-# class Assignment(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     asset_id = db.Column(db.Integer, db.ForeignKey('asset.id'), nullable=False)
-#     location_id = db.Column(db.Integer, db.ForeignKey('location.id'), nullable=False)
-#     assigned_to = db.Column(db.String(255), nullable=False)
-#     assigned_date = db.Column(db.Date)
-#     return_date = db.Column(db.Date)
-
-#     asset = db.relationship('Asset', backref='assignments', lazy=True)
-#     location = db.relationship('Location', backref='assignments', lazy=True)
-
-#     def __repr__(self):
-#         return f'<Assignment {self.assigned_to} - {self.asset_id}>'
-
-#     def to_dict(self):
-#         return {
-#             'id': self.id,
-#             'asset_id': self.asset_id,
-#             'location_id': self.location_id,
-#             'assigned_to': self.assigned_to,
-#             'assigned_date': self.assigned_date,
-#             'return_date': self.return_date,
-#         }
+#         print("✅ Tables checked/created successfully.")
 
 
 
+
+
+
+
+
+# from exts import db
+# from sqlalchemy.sql import text
+# from datetime import date, timedelta
+
+# def calculate_depreciation_end_date(purchase_price, depreciation_rate, purchase_date):
+#     """
+#     Calculate the date when an asset will be fully depreciated.
+#     Formula: Depreciation Duration (Years) = 1 / (Depreciation Rate / 100)
+#     """
+#     if not purchase_price or not depreciation_rate or depreciation_rate <= 0:
+#         return None
+
+#     years_to_depreciate = 1 / (depreciation_rate / 100)  # Convert rate to fraction
+#     depreciation_end = purchase_date + timedelta(days=int(years_to_depreciate * 365))
+
+#     return depreciation_end
+
+# def create_tables():
+#     """Ensures tables exist without dropping them."""
+#     with db.engine.begin() as connection:
+#         print("🚀 Ensuring tables exist...")
+
+#         # Location table to store asset locations
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS location (
+#             id SERIAL PRIMARY KEY,
+#             name VARCHAR(255) NOT NULL,
+#             description VARCHAR(500)
+#         );
+#         """))
+
+#         # Assignment table tracks asset assignments
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS assignment (
+#             id SERIAL PRIMARY KEY,
+#             asset_id INTEGER REFERENCES asset(id) ON DELETE CASCADE,
+#             location_id INTEGER REFERENCES location(id) ON DELETE CASCADE,
+#             assigned_to VARCHAR(255) NOT NULL,
+#             assigned_date DATE DEFAULT CURRENT_DATE,
+#             return_date DATE
+#         );
+#         """))
+
+#         # Asset table with direct location reference
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS asset (
+#             id SERIAL PRIMARY KEY,
+#             item VARCHAR(255) NOT NULL,
+#             specifications VARCHAR(500),
+#             class_code VARCHAR(50),
+#             serial_no VARCHAR(50) UNIQUE,
+#             location_id INTEGER REFERENCES location(id) ON DELETE SET NULL,  -- Direct link to location
+#             depreciation_rate FLOAT NOT NULL,
+#             purchase_price FLOAT NOT NULL,
+#             depreciation_end_date DATE,
+#             purchase_date DATE DEFAULT CURRENT_DATE,
+#             vendor VARCHAR(255),
+#             condition VARCHAR(50)
+#         );
+#         """))
+
+#         print("✅ Tables checked/created successfully.")
+
+
+
+
+
+
+# from exts import db
+# from sqlalchemy.sql import text
+# from datetime import date, timedelta
+
+# def calculate_depreciation_end_date(purchase_price, depreciation_rate, purchase_date):
+#     """
+#     Calculate the date when an asset will be fully depreciated.
+#     Formula: Depreciation Duration (Years) = 1 / (Depreciation Rate / 100)
+#     """
+#     if not purchase_price or not depreciation_rate or depreciation_rate <= 0:
+#         return None
+
+#     years_to_depreciate = 1 / (depreciation_rate / 100)  # Convert rate to fraction
+#     depreciation_end = purchase_date + timedelta(days=int(years_to_depreciate * 365))
+
+#     return depreciation_end
+
+# def create_tables():
+#     """Ensures tables exist without dropping them."""
+#     with db.engine.begin() as connection:
+#         print("🚀 Ensuring tables exist...")
+
+#         # Location table to store asset locations
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS location (
+#             id SERIAL PRIMARY KEY,
+#             name VARCHAR(255) NOT NULL,
+#             description VARCHAR(500)
+#         );
+#         """))
+
+#         # Assignment table tracks asset assignments
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS assignment (
+#             id SERIAL PRIMARY KEY,
+#             asset_id INTEGER REFERENCES asset(id) ON DELETE CASCADE,
+#             location_id INTEGER REFERENCES location(id) ON DELETE CASCADE,
+#             assigned_to VARCHAR(255) NOT NULL,
+#             assigned_date DATE DEFAULT CURRENT_DATE,
+#             return_date DATE
+#         );
+#         """))
+
+#         # Asset table with direct location reference
+#         connection.execute(text("""
+#         CREATE TABLE IF NOT EXISTS asset (
+#             id SERIAL PRIMARY KEY,
+#             item VARCHAR(255) NOT NULL,
+#             specifications VARCHAR(500),
+#             class_code VARCHAR(50),
+#             serial_no VARCHAR(50) UNIQUE,
+#             location_id INTEGER REFERENCES location(id) ON DELETE SET NULL,  -- ✅ Direct link to location
+#             depreciation_rate FLOAT NOT NULL,
+#             purchase_price FLOAT NOT NULL,
+#             depreciation_end_date DATE,
+#             purchase_date DATE DEFAULT CURRENT_DATE,
+#             vendor VARCHAR(255),
+#             condition VARCHAR(50)
+#         );
+#         """))
+
+#         print("✅ Tables checked/created successfully.")
+
+# def get_asset_by_id(asset_id):
+#     """Retrieve asset details including location name."""
+#     with db.engine.begin() as connection:
+#         result = connection.execute(text("""
+#         SELECT a.id, a.item, a.class_code, a.serial_no, a.purchase_date, 
+#                a.depreciation_rate, a.depreciation_end_date, a.vendor, 
+#                ass.id AS assignment_id, ass.location_id, ass.assigned_to,
+#                l.name AS location_name  -- ✅ Fetch location name
+#         FROM asset a
+#         LEFT JOIN assignment ass ON a.id = ass.asset_id
+#         LEFT JOIN location l ON a.location_id = l.id  -- ✅ Correct join
+#         WHERE a.id = :id;
+#         """), {"id": asset_id})
+
+#         asset = result.fetchone()
+#         if asset:
+#             return dict(asset)  # Convert row to dictionary
+#         return None
+
+# def assign_asset(asset_id, location_id, assigned_to):
+#     """Assign an asset to a location and update its location_id."""
+#     with db.engine.begin() as connection:
+#         # Create assignment
+#         connection.execute(text("""
+#         INSERT INTO assignment (asset_id, location_id, assigned_to)
+#         VALUES (:asset_id, :location_id, :assigned_to);
+#         """), {"asset_id": asset_id, "location_id": location_id, "assigned_to": assigned_to})
+
+#         # ✅ Update asset.location_id so it's always set
+#         connection.execute(text("""
+#         UPDATE asset 
+#         SET location_id = :location_id 
+#         WHERE id = :asset_id;
+#         """), {"location_id": location_id, "asset_id": asset_id})
+
+#         print(f"✅ Asset {asset_id} assigned to location {location_id} and updated.")
 
 
 
@@ -168,82 +372,99 @@
 
 
 from exts import db
+from sqlalchemy.sql import text
+from datetime import date, timedelta
 
-class Asset(db.Model):
-    __tablename__ = "asset"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    item = db.Column(db.String(255), nullable=False)
-    specifications = db.Column(db.String(500))  
-    class_code = db.Column(db.String(50))
-    serial_no = db.Column(db.String(50), unique=True)
-    depreciation_rate = db.Column(db.Float)
-    purchase_price = db.Column(db.Float)
-    status = db.Column(db.String(20))
-    depreciation_start_date = db.Column(db.Date)
-    depreciation_end_date = db.Column(db.Date)
-    purchase_date = db.Column(db.Date)
-    location_id = db.Column(db.Integer, db.ForeignKey('location.id', ondelete='CASCADE'))  # ON DELETE CASCADE
-    vendor = db.Column(db.String(255))  # Added vendor field
-    condition = db.Column(db.String(50))  # Added condition field
+def calculate_depreciation_end_date(purchase_price, depreciation_rate, purchase_date):
+    """
+    Calculate the date when an asset will be fully depreciated.
+    Formula: Depreciation Duration (Years) = 1 / (Depreciation Rate / 100)
+    """
+    if not purchase_price or not depreciation_rate or depreciation_rate <= 0:
+        return None
 
-    location = db.relationship('Location', backref=db.backref('assets', passive_deletes=True))  # Enable cascade delete
+    years_to_depreciate = 1 / (depreciation_rate / 100)  # Convert rate to fraction
+    depreciation_end = purchase_date + timedelta(days=int(years_to_depreciate * 365))
 
-    def __repr__(self):
-        return f'<Asset {self.item}>'
+    return depreciation_end
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'item': self.item,
-            'specifications': self.specifications,
-            'class_code': self.class_code,
-            'serial_no': self.serial_no,
-            'depreciation_rate': self.depreciation_rate,
-            'purchase_price': self.purchase_price,
-            'status': self.status,
-            'depreciation_start_date': self.depreciation_start_date,
-            'depreciation_end_date': self.depreciation_end_date,
-            'purchase_date': self.purchase_date,
-            'vendor': self.vendor,
-            'condition': self.condition,
-            'location': self.location.name if self.location else None
-        }
+def create_tables():
+    """Ensures tables exist without dropping them."""
+    with db.engine.begin() as connection:
+        print("\U0001F680 Ensuring tables exist...")
 
-class Location(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255), nullable=False)
-    description = db.Column(db.String(500))
+        # Location table to store asset locations
+        connection.execute(text("""
+        CREATE TABLE IF NOT EXISTS location (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            description VARCHAR(500)
+        );
+        """))
 
-    def __repr__(self):
-        return f'<Location {self.name}>'
+        # Asset table with direct location reference
+        connection.execute(text("""
+        CREATE TABLE IF NOT EXISTS asset (
+            id SERIAL PRIMARY KEY,
+            item VARCHAR(255) NOT NULL,
+            specifications VARCHAR(500),
+            class_code VARCHAR(50),
+            serial_no VARCHAR(50) UNIQUE,
+            location_id INTEGER REFERENCES location(id) ON DELETE SET NULL,  -- ✅ Direct link to location
+            depreciation_rate FLOAT NOT NULL,
+            purchase_price FLOAT NOT NULL,
+            depreciation_end_date DATE,
+            purchase_date DATE DEFAULT CURRENT_DATE,
+            vendor VARCHAR(255),
+            condition VARCHAR(50)
+        );
+        """))
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-        }
+        # Assignment table tracks asset assignments
+        connection.execute(text("""
+        CREATE TABLE IF NOT EXISTS assignment (
+            id SERIAL PRIMARY KEY,
+            asset_id INTEGER REFERENCES asset(id) ON DELETE CASCADE,
+            location_id INTEGER REFERENCES location(id) ON DELETE CASCADE,
+            assigned_to VARCHAR(255) NOT NULL,
+            assigned_date DATE DEFAULT CURRENT_DATE,
+            return_date DATE
+        );
+        """))
 
-class Assignment(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    asset_id = db.Column(db.Integer, db.ForeignKey('asset.id', ondelete='CASCADE'), nullable=False)  # ON DELETE CASCADE
-    location_id = db.Column(db.Integer, db.ForeignKey('location.id', ondelete='CASCADE'), nullable=False)  # ON DELETE CASCADE
-    assigned_to = db.Column(db.String(255), nullable=False)
-    assigned_date = db.Column(db.Date)
-    return_date = db.Column(db.Date)
+        print("✅ Tables checked/created successfully.")
 
-    asset = db.relationship('Asset', backref=db.backref('assignments', passive_deletes=True), lazy=True)
-    location = db.relationship('Location', backref=db.backref('assignments', passive_deletes=True), lazy=True)
+def get_asset_by_id(asset_id):
+    """Retrieve asset details including location name."""
+    with db.engine.begin() as connection:
+        result = connection.execute(text("""
+        SELECT a.id, a.item, a.class_code, a.serial_no, a.purchase_date, 
+               a.depreciation_rate, a.depreciation_end_date, a.vendor, 
+               a.location_id, l.name AS location_name  -- ✅ Fetch location name
+        FROM asset a
+        LEFT JOIN location l ON a.location_id = l.id  -- ✅ Correct join
+        WHERE a.id = :id;
+        """), {"id": asset_id})
 
-    def __repr__(self):
-        return f'<Assignment {self.assigned_to} - {self.asset_id}>'
+        asset = result.fetchone()
+        if asset:
+            return dict(asset)  # Convert row to dictionary
+        return None
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'asset_id': self.asset_id,
-            'location_id': self.location_id,
-            'assigned_to': self.assigned_to,
-            'assigned_date': self.assigned_date,
-            'return_date': self.return_date,
-        }
+def assign_asset(asset_id, location_id, assigned_to):
+    """Assign an asset to a location and update its location_id."""
+    with db.engine.begin() as connection:
+        # Create assignment
+        connection.execute(text("""
+        INSERT INTO assignment (asset_id, location_id, assigned_to)
+        VALUES (:asset_id, :location_id, :assigned_to);
+        """), {"asset_id": asset_id, "location_id": location_id, "assigned_to": assigned_to})
+
+        # ✅ Update asset.location_id so it's always set
+        connection.execute(text("""
+        UPDATE asset 
+        SET location_id = :location_id 
+        WHERE id = :asset_id;
+        """), {"location_id": location_id, "asset_id": asset_id})
+
+        print(f"✅ Asset {asset_id} assigned to location {location_id} and updated.")
