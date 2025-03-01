@@ -1,20 +1,6 @@
-
-
-
-
-
-
-
-
-
-
-
 from flask import request, jsonify
 from flask_restx import Namespace, Resource, fields
-from app import db
-from models import Location, Assignment
-from sqlalchemy.orm import joinedload
-# from flask_jwt_extended import jwt_required  # Uncomment when needed
+from exts import db  # Import the database engine
 
 # Create a namespace for location management
 location_ns = Namespace('locations', description='Location operations')
@@ -30,69 +16,77 @@ Location_model = location_ns.model(
 
 @location_ns.route('/')
 class LocationList(Resource):
-    # @jwt_required()
     @location_ns.expect(Location_model)
     def post(self):
         data = request.get_json()
+        query = """
+        INSERT INTO location (name, description) 
+        VALUES (:name, :description) RETURNING id;
+        """
         
-        # Create a new location using direct assignment
-        new_location = Location(**data)
-        db.session.add(new_location)
-        db.session.commit()
+        with db.engine.connect() as connection:
+            result = connection.execute(db.text(query), data)
+            location_id = result.scalar()
+            connection.commit()
 
-        return new_location.to_dict(), 201
+        return {"id": location_id, **data}, 201
 
-    # @jwt_required()
     def get(self):
-        locations = Location.query.options(joinedload(Location.assets)).all()
-        location_list = []
+        query = """
+        SELECT l.id, l.name, l.description, 
+               COALESCE(json_agg(a) FILTER (WHERE a.id IS NOT NULL), '[]') AS assets
+        FROM location l
+        LEFT JOIN assignment a ON l.id = a.location_id
+        GROUP BY l.id;
+        """
         
-        for location in locations:
-            asset_details = [
-                {'asset_id': a.asset_id, 'assigned_to': a.assigned_to}
-                for a in location.assignments
-            ]
-            
-            location_info = location.to_dict()
-            location_info['assets'] = asset_details
-            location_list.append(location_info)
-
-        return location_list, 200
+        with db.engine.connect() as connection:
+            result = connection.execute(db.text(query))
+            locations = [dict(row._mapping) for row in result]
+        
+        return locations, 200
 
 @location_ns.route('/<int:location_id>')
 class LocationResource(Resource):
-    # @jwt_required()
     def get(self, location_id):
-        location = Location.query.options(joinedload(Location.assets)).filter_by(id=location_id).first_or_404()
+        query = """
+        SELECT l.id, l.name, l.description, 
+               COALESCE(json_agg(a) FILTER (WHERE a.id IS NOT NULL), '[]') AS assets
+        FROM location l
+        LEFT JOIN assignment a ON l.id = a.location_id
+        WHERE l.id = :location_id
+        GROUP BY l.id;
+        """
         
-        asset_details = [
-            {'asset_id': a.asset_id, 'assigned_to': a.assigned_to}
-            for a in location.assignments
-        ]
+        with db.engine.connect() as connection:
+            result = connection.execute(db.text(query), {'location_id': location_id})
+            location = result.fetchone()
+        
+        if not location:
+            return {'error': 'Location not found'}, 404
+        
+        return dict(location._mapping), 200
 
-        location_info = location.to_dict()
-        location_info['assets'] = asset_details
-
-        return location_info, 200
-
-    # @jwt_required()
     @location_ns.expect(Location_model)
     def put(self, location_id):
-        location = Location.query.get_or_404(location_id)
         data = request.get_json()
-
-        # Update fields dynamically
-        for key, value in data.items():
-            setattr(location, key, value)
+        query = """
+        UPDATE location SET name = :name, description = :description WHERE id = :location_id;
+        """
         
-        db.session.commit()
-        return location.to_dict(), 200
+        with db.engine.connect() as connection:
+            result = connection.execute(db.text(query), {**data, 'location_id': location_id})
+            connection.commit()
 
-    # @jwt_required()
+        return {"id": location_id, **data}, 200
+
     def delete(self, location_id):
-        location = Location.query.get_or_404(location_id)
-        db.session.delete(location)
-        db.session.commit()
+        query = "DELETE FROM location WHERE id = :location_id;"
+        
+        with db.engine.connect() as connection:
+            connection.execute(db.text(query), {'location_id': location_id})
+            connection.commit()
+        
         return '', 204  # No content for 204 response
 
 # Register the namespace in your app
