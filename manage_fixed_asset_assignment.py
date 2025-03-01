@@ -1,6 +1,4 @@
 
-
-
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from exts import db
@@ -33,9 +31,15 @@ class AssignmentListResource(Resource):
         if not data.get('location_id') and not data.get('assigned_to'):
             return {'error': 'Either location_id or assigned_to must be provided'}, 400
 
-        query = text("""
+        insert_query = text("""
             INSERT INTO assignment (asset_id, location_id, assigned_to, assigned_date, return_date)
             VALUES (:asset_id, :location_id, :assigned_to, :assigned_date, :return_date) RETURNING id;
+        """)
+
+        update_asset_location_query = text("""
+            UPDATE asset 
+            SET location_id = :location_id 
+            WHERE id = :asset_id;
         """)
 
         values = {
@@ -47,10 +51,15 @@ class AssignmentListResource(Resource):
         }
 
         try:
-            with db.engine.connect() as connection:
-                result = connection.execute(query, values)
-                connection.commit()
+            with db.engine.begin() as connection:
+                # Insert into assignment table
+                result = connection.execute(insert_query, values)
                 assignment_id = result.fetchone()[0]
+
+                # Update asset location if location_id is provided
+                if data.get('location_id'):
+                    connection.execute(update_asset_location_query, values)
+
                 return {'id': assignment_id, **data}, 201
         except Exception as e:
             return {'error': str(e)}, 500
@@ -106,6 +115,12 @@ class AssignmentResource(Resource):
             WHERE id = :assignment_id;
         """)
 
+        update_asset_location_query = text("""
+            UPDATE asset 
+            SET location_id = :location_id 
+            WHERE id = :asset_id;
+        """)
+
         values = {
             'asset_id': data['asset_id'],
             'location_id': data.get('location_id'),
@@ -116,9 +131,10 @@ class AssignmentResource(Resource):
         }
 
         try:
-            with db.engine.connect() as connection:
+            with db.engine.begin() as connection:
                 connection.execute(update_query, values)
-                connection.commit()
+                if data.get('location_id'):
+                    connection.execute(update_asset_location_query, values)
                 return {'message': 'Assignment updated successfully'}, 200
         except Exception as e:
             return {'error': str(e)}, 500
@@ -137,4 +153,3 @@ class AssignmentResource(Resource):
 # Register the namespace in your app
 def register_routes(api):
     api.add_namespace(assignment_ns)
-
