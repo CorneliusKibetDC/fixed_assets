@@ -5,7 +5,7 @@ from flask_restx import Namespace, Resource, fields
 from exts import db
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
-from datetime import date
+from datetime import date, datetime
 from models import calculate_depreciation_end_date  # Ensure to import the function
 
 # Define the Namespace for 'assets' API operations
@@ -106,19 +106,28 @@ class AssetFilter(Resource):
             
             for row in result:
                 asset = dict(row)
-                if isinstance(asset.get('purchase_date'), date):
-                    purchase_date = asset['purchase_date']
-                    if purchase_date:
-                        depreciation_end_date = calculate_depreciation_end_date(
-                            asset['purchase_price'], asset['depreciation_rate'], date.fromisoformat(purchase_date)
-                        ).isoformat()
-                    else:  
-                        depreciation_end_date = None  
-                    asset['depreciation_end_date'] = depreciation_end_date    
+                
+                # Convert purchase_date to ISO format safely
+                purchase_date = asset.get('purchase_date')
+                if purchase_date:
+                    if isinstance(purchase_date, str):  # If it's a string, convert it to a date
+                        purchase_date = date.fromisoformat(purchase_date)
+                    elif isinstance(purchase_date, datetime):  # If it's a datetime object, extract date
+                        purchase_date = purchase_date.date()
                     
+                    depreciation_end_date = calculate_depreciation_end_date(
+                        asset['purchase_price'], asset['depreciation_rate'], purchase_date
+                    ).isoformat()
+                else:  
+                    depreciation_end_date = None  
+                    
+                asset['depreciation_end_date'] = depreciation_end_date    
+                asset['purchase_date'] = purchase_date.isoformat() if purchase_date else None  # Ensure ISO format
+                
                 assets.append(asset)
 
         return assets, 200
+
 
 @asset_ns.route('/<int:id>')
 class AssetResource(Resource):
