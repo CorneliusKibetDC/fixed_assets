@@ -38,7 +38,8 @@ class AssetList(Resource):
     def get(self):
         """Get a list of all assets."""
         query = text("""
-            SELECT a.id, a.item, a.specifications, a.class_code, a.serial_no, a.purchase_date, 
+            SELECT a.id, a.item, a.specifications, a.class_code, a.serial_no, 
+                   COALESCE(a.purchase_date, '1970-01-01') AS purchase_date,  
                    a.depreciation_rate, a.vendor, a.purchase_price, a.condition, a.status,
                    COALESCE(l.id::TEXT, 'N/A') AS location_id, 
                    COALESCE(l.name, 'N/A') AS location_name, 
@@ -53,9 +54,15 @@ class AssetList(Resource):
             assets = []
             for row in result.mappings():
                 asset = {key: (value.isoformat() if isinstance(value, date) else value) for key, value in row.items()}
-                asset['depreciation_end_date'] = calculate_depreciation_end_date(
-                    asset['purchase_price'], asset['depreciation_rate'], date.fromisoformat(asset['purchase_date'])
-                ).isoformat() if asset['purchase_date'] else None
+                purchase_date = asset.get('purchase_date')
+                if purchase_date and purchase_date != '1970-01-01':
+                    purchase_date = date.fromisoformat(purchase_date)
+                    asset['depreciation_end_date'] = calculate_depreciation_end_date(
+                        asset['purchase_price'], asset['depreciation_rate'], purchase_date
+                    ).isoformat()
+                else:
+                    asset['depreciation_end_date'] = None
+                
                 assets.append(asset)
         
         return assets, 200
@@ -100,10 +107,15 @@ class AssetFilter(Resource):
             for row in result:
                 asset = dict(row)
                 if isinstance(asset.get('purchase_date'), date):
-                    asset['purchase_date'] = asset['purchase_date'].isoformat()
-                asset['depreciation_end_date'] = calculate_depreciation_end_date(
-                    asset['purchase_price'], asset['depreciation_rate'], date.fromisoformat(asset['purchase_date'])
-                ).isoformat() if asset['purchase_date'] else None
+                    purchase_date = asset['purchase_date']
+                    if purchase_date:
+                        depreciation_end_date = calculate_depreciation_end_date(
+                            asset['purchase_price'], asset['depreciation_rate'], date.fromisoformat(purchase_date)
+                        ).isoformat()
+                    else:  
+                        depreciation_end_date = None  
+                    asset['depreciation_end_date'] = depreciation_end_date    
+                    
                 assets.append(asset)
 
         return assets, 200
@@ -111,9 +123,10 @@ class AssetFilter(Resource):
 @asset_ns.route('/<int:id>')
 class AssetResource(Resource):
     def get(self, id):
-        """Get asset by ID with the same JSON structure as all assets."""
+        """Get asset by ID."""
         query = text("""
-            SELECT a.id, a.item, a.specifications, a.class_code, a.serial_no, a.purchase_date, 
+            SELECT a.id, a.item, a.specifications, a.class_code, a.serial_no, 
+                   COALESCE(a.purchase_date, '1970-01-01') AS purchase_date,  
                    a.depreciation_rate, a.vendor, a.purchase_price, a.condition, a.status,
                    COALESCE(l.id::TEXT, 'N/A') AS location_id, 
                    COALESCE(l.name, 'N/A') AS location_name, 
@@ -131,9 +144,14 @@ class AssetResource(Resource):
             return {'message': 'Asset not found'}, 404
 
         asset = {key: (value.isoformat() if isinstance(value, date) else value) for key, value in result.items()}
-        asset['depreciation_end_date'] = calculate_depreciation_end_date(
-            asset['purchase_price'], asset['depreciation_rate'], date.fromisoformat(asset['purchase_date'])
-        ).isoformat() if asset['purchase_date'] else None
+        purchase_date = asset.get('purchase_date')
+        if purchase_date and purchase_date != '1970-01-01':
+            purchase_date = date.fromisoformat(purchase_date)
+            asset['depreciation_end_date'] = calculate_depreciation_end_date(
+                asset['purchase_price'], asset['depreciation_rate'], purchase_date
+            ).isoformat()
+        else:
+            asset['depreciation_end_date'] = None
 
         return asset, 200
 
