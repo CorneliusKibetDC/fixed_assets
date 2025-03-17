@@ -220,28 +220,10 @@ class AssetResource(Resource):
         
         return {'message': 'Asset deleted successfully'}, 200
 
-@asset_ns.route('/return/<int:id>')
-class AssetReturn(Resource):
-    def post(self, id):
-        """Return an asset and mark it as unassigned."""
-        update_query = text("""
-            UPDATE asset 
-            SET status = 'unassigned', assignment_id = NULL, assigned_to = NULL
-            WHERE id = :id
-        """)
 
-        try:
-            with db.engine.connect() as connection:
-                result = connection.execute(update_query, {'id': id})
-                connection.commit()
 
-            if result.rowcount == 0:
-                return {'message': 'Asset not found or already unassigned'}, 404
 
-            return {'message': 'Asset returned successfully and marked as unassigned'}, 200
 
-        except Exception as e:
-            return {'message': f'Error returning asset: {str(e)}'}, 500
 
 # Function to register routes
 def register_routes(api):

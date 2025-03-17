@@ -60,7 +60,7 @@ def calculate_depreciation_end_date(purchase_price, depreciation_rate, purchase_
 
 def create_tables():
     with db.engine.begin() as connection:
-        print("\U0001F680 Ensuring tables exist...")
+        print("Ensuring tables exist...")
         connection.execute(text("""
         CREATE TABLE IF NOT EXISTS location (
             id SERIAL PRIMARY KEY,
@@ -95,7 +95,7 @@ def create_tables():
             return_date DATE
         );
         """))
-        print("✅ Tables checked/updated successfully.")
+        print("Tables checked/updated successfully.")
 
 
 

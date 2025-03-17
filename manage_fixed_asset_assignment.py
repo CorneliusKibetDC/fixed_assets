@@ -12,13 +12,14 @@ assignment_ns = Namespace('assignments', description='Asset assignment operation
 Assignment_model = assignment_ns.model(
     'Assignment',
     {
-        'asset_id': fields.Integer(required=True, description='ID of the assigned asset'),
-        'location_id': fields.Integer(required=False, description='ID of the location where asset is assigned'),
+        'asset_name': fields.String(required=True, description='Name of the assigned asset'),
+        'location_name': fields.String(required=True, description='Name of the location where asset is assigned'),
         'assigned_to': fields.String(required=False, description='Person assigned to the asset'),
         'assigned_date': fields.String(required=False, description='Date of assignment (YYYY-MM-DD)'),
         'return_date': fields.String(required=False, description='Expected return date of the asset (YYYY-MM-DD)')
     }
 )
+
 
 @assignment_ns.route('/')
 class AssignmentListResource(Resource):
@@ -26,11 +27,14 @@ class AssignmentListResource(Resource):
     def post(self):
         data = request.get_json()
 
-        # Ensure at least one of location_id or assigned_to is provided
-        if not data.get('location_id') and not data.get('assigned_to'):
-            return {'error': 'Either location_id or assigned_to must be provided'}, 400
+        # Ensure at least one of location_name or assigned_to is provided
+        if not data.get('location_name') and not data.get('assigned_to'):
+            return {'error': 'Either location_name or assigned_to must be provided'}, 400
 
-        check_asset_query = text("SELECT status FROM asset WHERE id = :asset_id;")
+        # Get location_id and asset_id from location_name and asset_name
+        location_query = text("SELECT id FROM location WHERE name = :location_name;")
+        asset_query = text("SELECT id FROM asset WHERE item = :asset_name;")
+
         insert_query = text("""
             INSERT INTO assignment (asset_id, location_id, assigned_to, assigned_date, return_date)
             VALUES (:asset_id, :location_id, :assigned_to, :assigned_date, :return_date) RETURNING id;
@@ -42,33 +46,45 @@ class AssignmentListResource(Resource):
             UPDATE asset SET location_id = :location_id WHERE id = :asset_id;
         """)
 
-        values = {
-            'asset_id': data['asset_id'],
-            'location_id': data.get('location_id'),
-            'assigned_to': data.get('assigned_to'),
-            'assigned_date': data.get('assigned_date'),
-            'return_date': data.get('return_date')
-        }
-
+        # Find the location_id and asset_id
         try:
             with db.engine.begin() as connection:
-                asset_status = connection.execute(check_asset_query, {'asset_id': data['asset_id']}).scalar()
-                if asset_status == 'assigned':
-                    return {'error': 'Asset is already assigned'}, 400
+                location_id = connection.execute(location_query, {'location_name': data['location_name']}).scalar()
+                asset_id = connection.execute(asset_query, {'asset_name': data['asset_name']}).scalar()
+
+                # If either location or asset is not found
+                if not location_id or not asset_id:
+                    return {'error': 'Location or Asset not found'}, 400
+
+                # Set assigned_date to today's date if not provided
+                assigned_date = data.get('assigned_date', date.today().isoformat())
+
+                values = {
+                    'asset_id': asset_id,
+                    'location_id': location_id,
+                    'assigned_to': data.get('assigned_to'),
+                    'assigned_date': assigned_date,
+                    'return_date': data.get('return_date')
+                }
 
                 result = connection.execute(insert_query, values)
                 assignment_id = result.fetchone()[0]
 
-                connection.execute(update_asset_status_query, {'asset_id': data['asset_id']})
-                if data.get('location_id'):
-                    connection.execute(update_asset_location_query, values)
+                connection.execute(update_asset_status_query, {'asset_id': asset_id})
+                connection.execute(update_asset_location_query, {'asset_id': asset_id, 'location_id': location_id})
 
                 return {'id': assignment_id, **data}, 201
         except Exception as e:
             return {'error': str(e)}, 500
 
     def get(self):
-        query = text("SELECT * FROM assignment;")
+        query = text("""
+            SELECT a.id, a.asset_id, a.location_id, a.assigned_to, a.assigned_date, a.return_date,
+                   l.name AS location_name, as1.item AS asset_name
+            FROM assignment a
+            JOIN location l ON a.location_id = l.id
+            JOIN asset as1 ON a.asset_id = as1.id;
+        """)
 
         with db.engine.connect() as connection:
             result = connection.execute(query)
@@ -83,10 +99,19 @@ class AssignmentListResource(Resource):
 
             return assignments, 200
 
+
+
 @assignment_ns.route('/<int:assignment_id>')
 class AssignmentResource(Resource):
     def get(self, assignment_id):
-        query = text("SELECT * FROM assignment WHERE id = :assignment_id;")
+        query = text("""
+            SELECT a.id, a.asset_id, a.location_id, a.assigned_to, a.assigned_date, a.return_date,
+                   l.name AS location_name, as1.item AS asset_name
+            FROM assignment a
+            JOIN location l ON a.location_id = l.id
+            JOIN asset as1 ON a.asset_id = as1.id
+            WHERE a.id = :assignment_id;
+        """)
 
         with db.engine.connect() as connection:
             result = connection.execute(query, {'assignment_id': assignment_id})
@@ -101,6 +126,7 @@ class AssignmentResource(Resource):
                 assignment['return_date'] = assignment['return_date'].isoformat()
 
             return assignment, 200
+
 
     @assignment_ns.expect(Assignment_model)
     def put(self, assignment_id):
@@ -149,42 +175,60 @@ class AssignmentResource(Resource):
                 return {'message': 'Assignment deleted successfully'}, 200
         except Exception as e:
             return {'error': str(e)}, 500
-@assignment_ns.route('/<int:assignment_id>/return')
-class ReturnAssignmentResource(Resource):
-    def patch(self, assignment_id):
-        return_date = date.today().isoformat()
 
-        get_assignment_query = text("SELECT asset_id FROM assignment WHERE id = :assignment_id;")
-        update_assignment_query = text("""
-            UPDATE assignment 
-            SET return_date = :return_date 
-            WHERE id = :assignment_id;
-        """)
-        update_asset_status_query = text("""
+
+
+@assignment_ns.route('/return/<string:asset_name>')
+class AssetReturn(Resource):
+    def post(self, asset_name):
+        """Return an asset by name, mark it as unassigned, and update the assignment in the database."""
+        # Query to get the asset id based on the asset name
+        asset_query = text("SELECT id FROM asset WHERE item = :asset_name;")
+        # Query to get the assignment id based on the asset id (to later delete the assignment)
+        assignment_query = text("SELECT id FROM assignment WHERE asset_id = :asset_id;")
+        
+        # Query to update the asset status to 'unassigned'
+        update_asset_query = text("""
             UPDATE asset 
-            SET status = 'available', assigned_to = NULL 
-            WHERE id = :asset_id;
+            SET status = 'unassigned', assignment_id = NULL, assigned_to = NULL
+            WHERE id = :id
         """)
-        delete_assignment_query = text("DELETE FROM assignment WHERE id = :assignment_id;")
+        
+        # Query to delete the assignment after returning the asset
+        delete_assignment_query = text("""
+            DELETE FROM assignment 
+            WHERE asset_id = :asset_id
+        """)
 
         try:
-            with db.engine.begin() as connection:
-                result = connection.execute(get_assignment_query, {'assignment_id': assignment_id})
-                assignment = result.mappings().first()
-                if not assignment:
-                    return {'error': 'Assignment not found'}, 404
+            with db.engine.connect() as connection:
+                # Get the asset id from the asset name
+                asset_id = connection.execute(asset_query, {'asset_name': asset_name}).scalar()
 
-                asset_id = assignment['asset_id']
-                connection.execute(update_assignment_query, {'return_date': return_date, 'assignment_id': assignment_id})
-                connection.execute(update_asset_status_query, {'asset_id': asset_id})
-                connection.execute(delete_assignment_query, {'assignment_id': assignment_id})
+                # If no asset with that name exists, return a 404 error
+                if not asset_id:
+                    return {'message': 'Asset not found'}, 404
 
-                return {
-                    'message': 'Asset returned successfully',
-                    'return_date': return_date
-                }, 200
+                # Get the assignment id using the asset id (to delete the assignment)
+                assignment_id = connection.execute(assignment_query, {'asset_id': asset_id}).scalar()
+
+                # Update the asset's status to 'unassigned'
+                result = connection.execute(update_asset_query, {'id': asset_id})
+                
+                # If no asset was updated, return a message
+                if result.rowcount == 0:
+                    return {'message': 'Asset already unassigned or not found'}, 404
+
+                # If there's an assignment for the asset, delete it
+                if assignment_id:
+                    connection.execute(delete_assignment_query, {'asset_id': asset_id})
+
+                connection.commit()
+
+            return {'message': 'Asset returned successfully and marked as unassigned'}, 200
+
         except Exception as e:
-            return {'error': str(e)}, 500
+            return {'message': f'Error returning asset: {str(e)}'}, 500        
         
 
 

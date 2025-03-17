@@ -21,7 +21,7 @@ def create_app():
     db.init_app(app)
     Migrate(app, db)
 
-    # ✅ FIX: Ensure tables exist inside app context
+    # FIX: Ensure tables exist inside app context
     with app.app_context():
         create_tables()
 
@@ -40,10 +40,7 @@ def create_app():
     register_filter_routes(api)
     register_asset_routes(api)
 
-    # Test Route
-    @app.route('/ping', methods=['GET'])
-    def ping():
-        return {"message": "pong"}, 200
+  
 
     # Root route
     @api.route('/')

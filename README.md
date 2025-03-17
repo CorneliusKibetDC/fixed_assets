@@ -36,7 +36,7 @@ Start the Application:
 python app.py
 Access the Application:
 
-Open your web browser and navigate to http://localhost:5000 to access the Fixed Assets Management System.
+Open your web browser and navigate to http://localhost:5000/docs to access the Fixed Assets Management System.
 
 # Contributing
 Contributions are welcome! Please follow these steps:

@@ -26,7 +26,7 @@ class LocationList(Resource):
         VALUES (:name, :description) RETURNING id;
         """
         
-        with db.engine.begin() as connection:  # Ensures auto-commit
+        with db.engine.begin() as connection: 
             result = connection.execute(db.text(query), data)
             location_id = result.scalar()
 
